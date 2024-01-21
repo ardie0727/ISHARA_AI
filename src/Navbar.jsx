@@ -1,17 +1,18 @@
 import isharalogo from './assets/isharalogo.png'
+import {Link} from 'react-router-dom'
 const Navbar = () => {
     const tags=["Home","About Us\n","Learn","Translate","Profile"]
     return ( 
         <>
         <div className="navsep">
         <nav className="navbar">
-        <a href='/' className='logo'><img src={isharalogo} alt="ISHARA.AI"></img>ISHARA AI</a>
+        <Link to='/' className='logo'><img src={isharalogo} alt="ISHARA.AI"></img>ISHARA AI</Link>
         <div className="links">
-            <a href="/" className="home">{tags[0]}</a>
-            <a href="/aboutus" className="aboutus">{tags[1]}</a>
-            <a href="/learn" className="learn">{tags[2]}</a>
-            <a href="/translate" className="translate">{tags[3]}</a>
-            <a href="/profile" className="profile">{tags[4]}</a>
+            <Link to="/" className="home">{tags[0]}</Link>
+            <Link to="/aboutus" className="aboutus">{tags[1]}</Link>
+            <Link to="/learn" className="learn">{tags[2]}</Link>
+            <Link to="/translate" className="translate">{tags[3]}</Link>
+            <Link to="/profile" className="profile">{tags[4]}</Link>
         
         </div>
         
