@@ -12,10 +12,8 @@ const Navbar = () => {
             <Link to="/aboutus" className="aboutus">{tags[1]}</Link>
             <Link to="/learn" className="learn">{tags[2]}</Link>
             <Link to="/translate" className="translate">{tags[3]}</Link>
-            <Link to="/profile" className="profile">{tags[4]}</Link>
-        
+            <Link to="/profile" className="profile">{tags[4]}</Link>       
         </div>
-        
         </nav>
         </div>
         </>
