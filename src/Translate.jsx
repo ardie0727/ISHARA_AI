@@ -1,4 +1,4 @@
-import {HandLandmarker,FilesetResolver, DrawingUtils}from '@mediapipe/tasks-vision'
+import {HandLandmarker,FilesetResolvers}from '@mediapipe/tasks-vision'
 import React, { useRef} from 'react';
 import Webcam from 'react-webcam';
 
