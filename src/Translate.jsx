@@ -12,8 +12,11 @@ const Translate = () => {
         right: 0,
         textAlign: "center",
         zIndex: 9,
-        width: 640,
-        height: 500,
+        // width: 640,
+        // height: 500,
+        width: '100%',
+        maxWidth: '640px', 
+        height: 'auto', 
     }
     const webcamRef=useRef(null);
     const canvasRef=useRef(null);
