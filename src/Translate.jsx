@@ -14,6 +14,7 @@ const Translate = () => {
         zIndex: 9,
         // width: 640,
         // height: 500,
+        //hua isse
         width: '100%',
         maxWidth: '640px', 
         height: 'auto', 
