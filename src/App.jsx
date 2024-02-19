@@ -1,4 +1,4 @@
-
+import ParticlesBackground from './components/ParticlesBackground'
 import Navbar from './Navbar'
 import {BrowserRouter as Router, Route, Routes} from 'react-router-dom'
 import Learn from './Learn'
@@ -11,6 +11,7 @@ function App() {
   return (
     <>
     <Router> 
+      <ParticlesBackground/>
       <Navbar/>
       <div className="content">
       <Routes>
