@@ -1,11 +1,13 @@
 import {HandLandmarker,FilesetResolver, FaceLandmarker, DrawingUtils, PoseLandmarker}from '@mediapipe/tasks-vision'
-
+import * as tf from '@tensorflow/tfjs';
 import React, {useRef} from 'react';
 import Webcam from 'react-webcam';
 
 
 const Translate = () => {
-    
+    const actions={
+      1:'hello',
+    }
     const camStyle={
         position: "absolute",
         marginLeft: "auto",
@@ -20,13 +22,12 @@ const Translate = () => {
     }
     const webcamRef=useRef(null);
     const canvasRef=useRef(null);
-    
-    
-  
 
     let handLandmarker='undefined';
     let faceLandmarker='undefined';
     let poseLandmarker='undefined';
+    let model;
+
     const createHandLandmarker = async () => {
       
       const vision = await FilesetResolver.forVisionTasks(
@@ -59,19 +60,15 @@ const Translate = () => {
         numPoses: 2
       });
       
-      
+      model = await tf.loadLayersModel('model.json');
      setInterval(()=>{
-        handDetector(handLandmarker)
-        faceDetector(faceLandmarker)
-        poseDetector(poseLandmarker)
+        detector(handLandmarker,faceLandmarker,poseLandmarker,model)
       },100)
       
     }
     
+  
     
-    
-    
-
     const drawLandmarks = (landmarksArray) => {
       const canvas = canvasRef.current;
       const videoWidth = webcamRef.current.video.videoWidth;
@@ -156,22 +153,15 @@ const Translate = () => {
     const canvasElement = canvasRef.current;
     const canvasCtx = canvasElement.getContext("2d"); 
     const drawingUtils = new DrawingUtils(canvasCtx); 
-
     canvasCtx.save();
     
-
     for (const landmark of result) {
         drawingUtils.drawConnectors(landmark, PoseLandmarker.POSE_CONNECTIONS);
     }
-
     canvasCtx.restore();
 };
 
-
-
-
-
-const handDetector = async (handLandmarker)=>{
+const detector = async (handLandmarker, faceLandmarker, poseLandmarker, model)=>{
       if (
         typeof webcamRef.current!=='undefined'&& webcamRef.current !== null && webcamRef.current.video.readyState===4){
           const video=webcamRef.current.video;
@@ -184,50 +174,30 @@ const handDetector = async (handLandmarker)=>{
           canvasRef.current.width=videoWidth;
           canvasRef.current.height=videoHeight;
           const hand= await handLandmarker.detectForVideo(video, performance.now());
-         
           drawLandmarks(hand.landmarks)
 
-        } 
-    };
-    const faceDetector = async (faceLandmarker)=>{
-      if (
-        typeof webcamRef.current!=='undefined'&& webcamRef.current !== null && webcamRef.current.video.readyState===4){
-          const video=webcamRef.current.video;
-          const videoWidth=webcamRef.current.video.videoWidth;
-          const videoHeight=webcamRef.current.video.videoHeight;
-
-          webcamRef.current.video.width=videoWidth;
-          webcamRef.current.video.height=videoHeight;
-
-          canvasRef.current.width=videoWidth;
-          canvasRef.current.height=videoHeight;
-
           const face= await faceLandmarker.detectForVideo(video, performance.now());
-          
           drawfaceLandmarks(face.faceLandmarks)
-        } 
-    };
-    
-    const poseDetector = async (poseLandmarker)=>{
-      if (
-        typeof webcamRef.current!=='undefined'&& webcamRef.current !== null && webcamRef.current.video.readyState===4){
-          const video=webcamRef.current.video;
-          const videoWidth=webcamRef.current.video.videoWidth;
-          const videoHeight=webcamRef.current.video.videoHeight;
-
-          webcamRef.current.video.width=videoWidth;
-          webcamRef.current.video.height=videoHeight;
-
-          canvasRef.current.width=videoWidth;
-          canvasRef.current.height=videoHeight;
 
           const pose= await poseLandmarker.detectForVideo(video, performance.now());
-          console.log(pose.landmarks)
           drawposeLandmarks(pose.landmarks)
+
+          const random=tf.randomStandardNormal([30,1662])
+          const expanded = random.expandDims(0)
+          const obj = await model.predict(expanded)
+          const maxindices=obj.argMax(1).dataSync()[0];
+          console.log(maxindices)
+          const predictedValue=obj.arraySync();         
+          console.log(predictedValue);
+          
+          tf.dispose(maxindices)
+          tf.dispose(predictedValue)
+          tf.dispose(random)
+          tf.dispose(expanded)
+          tf.dispose(obj)
         } 
     };
     
-  
     return( 
     <>
     <div className="camera">
