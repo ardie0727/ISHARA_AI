@@ -1,215 +1,173 @@
-import {HandLandmarker,FilesetResolver, FaceLandmarker, DrawingUtils, PoseLandmarker}from '@mediapipe/tasks-vision'
+import React, { useEffect, useRef } from 'react';
+import Webcam from "react-webcam";
+import { Camera } from "@mediapipe/camera_utils";
+import { FACEMESH_TESSELATION, HAND_CONNECTIONS, Holistic, POSE_CONNECTIONS } from '@mediapipe/holistic';
+import { drawConnectors, drawLandmarks } from '@mediapipe/drawing_utils';
 import * as tf from '@tensorflow/tfjs';
-import React, {useRef} from 'react';
-import Webcam from 'react-webcam';
 
 
-const Translate = () => {
-    const actions={
-      1:'hello',
-    }
-    const camStyle={
-        position: "absolute",
-        marginLeft: "auto",
-        marginRight: "auto",
-        left:0,
-        right: 0,
-        textAlign: "center",
-        zIndex: 9,
-        width: '100%',
-        maxWidth:'540px',
-        height:'auto',
-    }
-    const webcamRef=useRef(null);
-    const canvasRef=useRef(null);
+function App() {
+  const webcamRef = useRef(null);
+  const canvasRef = useRef(null);
 
-    let handLandmarker='undefined';
-    let faceLandmarker='undefined';
-    let poseLandmarker='undefined';
-    let model;
-
-    const createHandLandmarker = async () => {
-      
-      const vision = await FilesetResolver.forVisionTasks(
-        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm"
-      );
-      handLandmarker = await HandLandmarker.createFromOptions(vision, {
-        baseOptions: {
-          modelAssetPath: `https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task`,
-          delegate: "GPU"
-        },
-        runningMode: 'VIDEO',
-        numHands: 2
-      });
-
-      faceLandmarker = await FaceLandmarker.createFromOptions(vision, {
-        baseOptions: {
-          modelAssetPath: `https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task`,
-          delegate: "GPU"
-        },
-        outputFaceBlendshapes: true,
-        runningMode:'VIDEO',
-        numFaces: 1
-      });
-      poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
-        baseOptions: {
-          modelAssetPath: `https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task`,
-          delegate: "GPU"
-        },
-        runningMode: 'VIDEO',
-        numPoses: 2
-      });
-      
-      model = await tf.loadLayersModel('model.json');
-     setInterval(()=>{
-        detector(handLandmarker,faceLandmarker,poseLandmarker,model)
-      },100)
-      
-    }
-    
-  
-    
-    const drawLandmarks = (landmarksArray) => {
-      const canvas = canvasRef.current;
-      const videoWidth = webcamRef.current.video.videoWidth;
-      const videoHeight = webcamRef.current.video.videoHeight;
-      
-      canvas.width = videoWidth;
-      canvas.height = videoHeight;
-  
-      const ctx = canvas.getContext('2d');
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = 'white';  
-  
-      landmarksArray.forEach(landmarks => {
-          drawConnectors(ctx, landmarks, HAND_CONNECTIONS, {
-              color: "#00FF00",
-              lineWidth: 5
-          }); 
-              
-          landmarks.forEach(landmark => {
-              
-              const x = landmark.x * videoWidth;
-              const y = landmark.y * videoHeight;
-  
-              ctx.beginPath();
-              ctx.arc(x, y, 5, 0, 2 * Math.PI); 
-              ctx.fill();
-          });
-      });
+  const containerStyle = {
+    position: "absolute",
+    marginLeft: "auto",
+    marginRight: "auto",
+    left: 0,
+    right: 0,
+    textAlign: "center",
+    zIndex: 9,
+    width: '100%',
+    maxWidth:'540px',
+    height:'auto',
+    transform: 'scaleX(-1)'
   };
-  
-  const drawfaceLandmarks=(landmarksArray)=>{
-  const ctx = canvasRef.current.getContext("2d");
-  const drawingUtils = new DrawingUtils(ctx);
-  for (const landmarks of landmarksArray) {
-    drawingUtils.drawConnectors(
-      landmarks,
-      FaceLandmarker.FACE_LANDMARKS_TESSELATION,
-      { color: "#C0C0C070", lineWidth: 1 }
-    );
-    drawingUtils.drawConnectors(
-      landmarks,
-      FaceLandmarker.FACE_LANDMARKS_RIGHT_EYE,
-      { color: "#FF3030" }
-    );
-    drawingUtils.drawConnectors(
-      landmarks,
-      FaceLandmarker.FACE_LANDMARKS_RIGHT_EYEBROW,
-      { color: "#FF3030" }
-    );
-    drawingUtils.drawConnectors(
-      landmarks,
-      FaceLandmarker.FACE_LANDMARKS_LEFT_EYE,
-      { color: "#30FF30" }
-    );
-    drawingUtils.drawConnectors(
-      landmarks,
-      FaceLandmarker.FACE_LANDMARKS_LEFT_EYEBROW,
-      { color: "#30FF30" }
-    );
-    drawingUtils.drawConnectors(
-      landmarks,
-      FaceLandmarker.FACE_LANDMARKS_FACE_OVAL,
-      { color: "#E0E0E0" }
-    );
-    drawingUtils.drawConnectors(landmarks, FaceLandmarker.FACE_LANDMARKS_LIPS, {
-      color: "#E0E0E0"
-    });
-    drawingUtils.drawConnectors(
-      landmarks,
-      FaceLandmarker.FACE_LANDMARKS_RIGHT_IRIS,
-      { color: "#FF3030" }
-    );
-    drawingUtils.drawConnectors(
-      landmarks,
-      FaceLandmarker.FACE_LANDMARKS_LEFT_IRIS,
-      { color: "#30FF30" }
-    );
-  }}
-     
- 
-  const drawposeLandmarks = (result) => {
+
+  const onResults = (results) => {
+    if (!webcamRef.current?.video || !canvasRef.current) return;
+    const videoWidth = webcamRef.current.video.videoWidth;
+    const videoHeight = webcamRef.current.video.videoHeight;
+    canvasRef.current.width = videoWidth;
+    canvasRef.current.height = videoHeight;
+
     const canvasElement = canvasRef.current;
-    const canvasCtx = canvasElement.getContext("2d"); 
-    const drawingUtils = new DrawingUtils(canvasCtx); 
+    const canvasCtx = canvasElement.getContext("2d");
+    if (canvasCtx == null) throw new Error('Could not get context');
     canvasCtx.save();
+    canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+
+   
+    canvasCtx.globalCompositeOperation = 'source-in';
+    canvasCtx.fillRect(0, 0, canvasElement.width, canvasElement.height);
+
     
-    for (const landmark of result) {
-        drawingUtils.drawConnectors(landmark, PoseLandmarker.POSE_CONNECTIONS);
-    }
+    canvasCtx.globalCompositeOperation = 'destination-atop';
+    canvasCtx.drawImage(
+      results.image, 0, 0, canvasElement.width, canvasElement.height);
+
+    canvasCtx.globalCompositeOperation = 'source-over';
+    drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS,
+      {color: '#00FF00', lineWidth: 4});
+    drawLandmarks(canvasCtx, results.poseLandmarks,
+      {color: '#FF0000', lineWidth: 2});
+    drawConnectors(canvasCtx, results.faceLandmarks, FACEMESH_TESSELATION,
+      { color: '#C0C0C070', lineWidth: 1 });
+    drawConnectors(canvasCtx, results.leftHandLandmarks, HAND_CONNECTIONS,
+      { color: '#CC0000', lineWidth: 5 });
+    drawLandmarks(canvasCtx, results.leftHandLandmarks,
+      { color: '#00FF00', lineWidth: 2 });
+    drawConnectors(canvasCtx, results.rightHandLandmarks, HAND_CONNECTIONS,
+      { color: '#00CC00', lineWidth: 5 });
+    drawLandmarks(canvasCtx, results.rightHandLandmarks,
+      { color: '#FF0000', lineWidth: 2 });
     canvasCtx.restore();
-};
 
-const detector = async (handLandmarker, faceLandmarker, poseLandmarker, model)=>{
-      if (
-        typeof webcamRef.current!=='undefined'&& webcamRef.current !== null && webcamRef.current.video.readyState===4){
-          const video=webcamRef.current.video;
-          const videoWidth=webcamRef.current.video.videoWidth;
-          const videoHeight=webcamRef.current.video.videoHeight;
-
-          webcamRef.current.video.width=videoWidth;
-          webcamRef.current.video.height=videoHeight;
-
-          canvasRef.current.width=videoWidth;
-          canvasRef.current.height=videoHeight;
-          const hand= await handLandmarker.detectForVideo(video, performance.now());
-          drawLandmarks(hand.landmarks)
-
-          const face= await faceLandmarker.detectForVideo(video, performance.now());
-          drawfaceLandmarks(face.faceLandmarks)
-
-          const pose= await poseLandmarker.detectForVideo(video, performance.now());
-          drawposeLandmarks(pose.landmarks)
-
-          const random=tf.randomStandardNormal([30,1662])
-          const expanded = random.expandDims(0)
-          const obj = await model.predict(expanded)
-          const maxindices=obj.argMax(1).dataSync()[0];
-          console.log(maxindices)
-          const predictedValue=obj.arraySync();         
-          console.log(predictedValue);
-          
-          tf.dispose(maxindices)
-          tf.dispose(predictedValue)
-          tf.dispose(random)
-          tf.dispose(expanded)
-          tf.dispose(obj)
-        } 
-    };
     
-    return( 
-    <>
-    <div className="camera">
-    <Webcam ref={webcamRef} style={camStyle}/>
-    <canvas ref={canvasRef} style={camStyle}/>
+  }
+let start;
+  useEffect(() => {
+    const holistic = new Holistic({
+      locateFile: (file) => {
+        return `https://cdn.jsdelivr.net/npm/@mediapipe/holistic/${file}`;
+      }
+    });
+    holistic.setOptions({
+      selfieMode: true,
+      modelComplexity: 1,
+      smoothLandmarks: true,
+      enableSegmentation: true,
+      smoothSegmentation: true,
+      refineFaceLandmarks: true,
+      minDetectionConfidence: 0.5,
+      minTrackingConfidence: 0.5
+    });
+    holistic.onResults(onResults);
 
-    <button style={{cursor:'pointer'}} onClick={()=>{createHandLandmarker();}}>Start Detection</button>
+    if (
+      typeof webcamRef.current !== "undefined" &&
+      webcamRef.current !== null
+    ) {
+      if (!webcamRef.current?.video) return;
+      const camera = new Camera(webcamRef.current.video, {
+        onFrame: async () => {
+          if (!webcamRef.current?.video) return;
+          await holistic.send({ image: webcamRef.current.video });
+        },
+        width: 640,
+        height: 480,
+      });
+      camera.start();
+    }
+  start=()=>{
+    setInterval(()=>{
+      detector()
+    },100)
+  }
+  }, [])
+
+ 
   
+
+
+  const detector = async (h)=>{
+    if (
+      typeof webcamRef.current!=='undefined'&& webcamRef.current !== null && webcamRef.current.video.readyState===4){
+        const video=webcamRef.current.video;
+        const videoWidth=webcamRef.current.video.videoWidth;
+        const videoHeight=webcamRef.current.video.videoHeight;
+
+        webcamRef.current.video.width=videoWidth;
+        webcamRef.current.video.height=videoHeight;
+
+        canvasRef.current.width=videoWidth;
+        canvasRef.current.height=videoHeight;
+
+        const model = await tf.loadLayersModel('model.json');
+        const img = tf.browser.fromPixels(video);
+        const normalizedImg = img.toFloat().div(255);
+        const extract=extract_landmarks(normalizedImg)
+        console.log(extract)
+        
+        // const resized = tf.image.resizeBilinear(img, [30, 1662]); 
+        // const grayscale = resized.mean(2); 
+        // const reshaped = grayscale.reshape([1, 30, 1662]); 
+        // const obj = await model.predict(landmarks);
+        // console.log(obj)
+        
+
+        tf.dispose(img)
+        tf.dispose(normalizedImg)
+        tf.dispose(extract)
+        tf.dispose(model)
+        // tf.dispose(resized)
+        // tf.dispose(grayscale)
+        // tf.dispose(reshaped)
+        // tf.dispose(obj)
+      } 
+    };
+
+    const extract_landmarks=(results) =>{
+      const face = results.faceLandmarks ? results.faceLandmarks.map(landmark => [landmark.x, landmark.y, landmark.z]).flat() : Array(1404).fill(0);
+      const pose = results.poseLandmarks ? results.poseLandmarks.map(landmark => [landmark.x, landmark.y, landmark.z, landmark.visibility]).flat() : Array(132).fill(0);
+      const rh = results.rightHandLandmarks ? results.rightHandLandmarks.map(landmark => [landmark.x, landmark.y, landmark.z]).flat() : Array(63).fill(0);
+      const lh = results.leftHandLandmarks ? results.leftHandLandmarks.map(landmark => [landmark.x, landmark.y, landmark.z]).flat() : Array(63).fill(0);
+  
+      return pose.concat(face, lh, rh);
+  }
+  return (
+    <div className="App">
+      <Webcam
+        ref={webcamRef}
+        style={containerStyle}
+      />
+      <canvas
+        ref={canvasRef}
+        style={containerStyle}
+      />
+      <button style={{cursor:'pointer'}} onClick={()=>start()}>Start</button>
     </div>
-    </>
-    );
-};
+  );
+}
 
-export default Translate;
-
+export default App;

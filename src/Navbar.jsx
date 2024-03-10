@@ -8,10 +8,10 @@ const Navbar = () => {
         <nav className="navbar">
         <Link to='/' className='logo'><img src={isharalogo} alt="ISHARA.AI"></img>ISHARA AI</Link>
         <div className="links">
-            <Link to="/" className="home">{tags[0]}</Link>
+            <Link to="/home" className="home">{tags[0]}</Link>
             <Link to="/aboutus" className="aboutus">{tags[1]}</Link>
             <Link to="/learn" className="learn">{tags[2]}</Link>
-            <Link to="/translate" className="translate">{tags[3]}</Link>
+            <Link to="/" className="translate">{tags[3]}</Link>
             <Link to="/profile" className="profile">{tags[4]}</Link>       
         </div>
         </nav>
