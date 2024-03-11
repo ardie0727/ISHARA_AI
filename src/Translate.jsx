@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Webcam from "react-webcam";
 import { Camera } from "@mediapipe/camera_utils";
 import { FACEMESH_TESSELATION, HAND_CONNECTIONS, Holistic, POSE_CONNECTIONS } from '@mediapipe/holistic';
@@ -9,7 +9,8 @@ import * as tf from '@tensorflow/tfjs';
 function App() {
   const webcamRef = useRef(null);
   const canvasRef = useRef(null);
-
+  const [btn,setBtn]=useState(true)
+  const id=useRef()
   const containerStyle = {
     position: "absolute",
     marginLeft: "auto",
@@ -63,11 +64,12 @@ function App() {
       { color: '#FF0000', lineWidth: 2 });
     canvasCtx.restore();
 
-    
   }
 let start;
+let stop;
+let holistic;
   useEffect(() => {
-    const holistic = new Holistic({
+     holistic = new Holistic({
       locateFile: (file) => {
         return `https://cdn.jsdelivr.net/npm/@mediapipe/holistic/${file}`;
       }
@@ -99,18 +101,24 @@ let start;
       });
       camera.start();
     }
-  start=()=>{
-    setInterval(()=>{
-      detector()
+  }, [])
+  
+  start=async()=>{
+    const model = await tf.loadLayersModel('model.json');
+    setBtn(false)
+    id.current=setInterval(()=>{
+      detector(model)
     },100)
   }
-  }, [])
-
- 
+  stop=()=>{
+    setBtn(true)
+    clearInterval(id.current)
+  }
+  
   
 
-
-  const detector = async (h)=>{
+  let extract_landmarks;
+  const detector = async (model)=>{
     if (
       typeof webcamRef.current!=='undefined'&& webcamRef.current !== null && webcamRef.current.video.readyState===4){
         const video=webcamRef.current.video;
@@ -122,12 +130,16 @@ let start;
 
         canvasRef.current.width=videoWidth;
         canvasRef.current.height=videoHeight;
+        const lol=holistic.extract_landmarks(onResults)
+        console.log(lol)
+        // const model = await tf.loadLayersModel('model.json');
+        // const img = tf.browser.fromPixels(video);
+        // // const normalizedImg = img.toFloat().div(255);
+        // const results=holistic.process(img)
+        // console.log(results)
 
-        const model = await tf.loadLayersModel('model.json');
-        const img = tf.browser.fromPixels(video);
-        const normalizedImg = img.toFloat().div(255);
-        const extract=extract_landmarks(normalizedImg)
-        console.log(extract)
+        // const extract=extract_landmarks(img)
+        // console.log(extract)
         
         // const resized = tf.image.resizeBilinear(img, [30, 1662]); 
         // const grayscale = resized.mean(2); 
@@ -137,8 +149,8 @@ let start;
         
 
         tf.dispose(img)
-        tf.dispose(normalizedImg)
-        tf.dispose(extract)
+        // tf.dispose(normalizedImg)
+        // tf.dispose(extract)
         tf.dispose(model)
         // tf.dispose(resized)
         // tf.dispose(grayscale)
@@ -147,12 +159,16 @@ let start;
       } 
     };
 
-    const extract_landmarks=(results) =>{
+    extract_landmarks=(results) =>{
       const face = results.faceLandmarks ? results.faceLandmarks.map(landmark => [landmark.x, landmark.y, landmark.z]).flat() : Array(1404).fill(0);
       const pose = results.poseLandmarks ? results.poseLandmarks.map(landmark => [landmark.x, landmark.y, landmark.z, landmark.visibility]).flat() : Array(132).fill(0);
       const rh = results.rightHandLandmarks ? results.rightHandLandmarks.map(landmark => [landmark.x, landmark.y, landmark.z]).flat() : Array(63).fill(0);
       const lh = results.leftHandLandmarks ? results.leftHandLandmarks.map(landmark => [landmark.x, landmark.y, landmark.z]).flat() : Array(63).fill(0);
-  
+      // console.log(face)
+      // console.log(pose)
+      // console.log(rh)
+      // console.log(lh)
+      
       return pose.concat(face, lh, rh);
   }
   return (
@@ -165,9 +181,10 @@ let start;
         ref={canvasRef}
         style={containerStyle}
       />
-      <button style={{cursor:'pointer'}} onClick={()=>start()}>Start</button>
+      <button style={{cursor:'pointer'}} onClick={btn ? start:stop}>{btn?"start":'stop'}</button>
     </div>
   );
 }
 
 export default App;
+
