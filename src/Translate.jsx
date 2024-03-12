@@ -5,12 +5,12 @@ import { FACEMESH_TESSELATION, HAND_CONNECTIONS, Holistic, POSE_CONNECTIONS } fr
 import { drawConnectors, drawLandmarks } from '@mediapipe/drawing_utils';
 import * as tf from '@tensorflow/tfjs';
 
-
-function App() {
+function Translate() {
   const webcamRef = useRef(null);
   const canvasRef = useRef(null);
-  const [btn,setBtn]=useState(true)
-  const id=useRef()
+  const [btn, setBtn] = useState(true);
+  const id = useRef();
+
   const containerStyle = {
     position: "absolute",
     marginLeft: "auto",
@@ -20,59 +20,13 @@ function App() {
     textAlign: "center",
     zIndex: 9,
     width: '100%',
-    maxWidth:'540px',
-    height:'auto',
-    transform: 'scaleX(-1)'
+    maxWidth: '540px',
+    height: 'auto'
   };
 
-  const onResults = (results) => {
-    if (!webcamRef.current?.video || !canvasRef.current) return;
-    const videoWidth = webcamRef.current.video.videoWidth;
-    const videoHeight = webcamRef.current.video.videoHeight;
-    canvasRef.current.width = videoWidth;
-    canvasRef.current.height = videoHeight;
-
-    const canvasElement = canvasRef.current;
-    const canvasCtx = canvasElement.getContext("2d");
-    if (canvasCtx == null) throw new Error('Could not get context');
-    canvasCtx.save();
-    canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-
-   
-    canvasCtx.globalCompositeOperation = 'source-in';
-    canvasCtx.fillRect(0, 0, canvasElement.width, canvasElement.height);
-
-    
-    canvasCtx.globalCompositeOperation = 'destination-atop';
-    canvasCtx.drawImage(
-      results.image, 0, 0, canvasElement.width, canvasElement.height);
-
-    canvasCtx.globalCompositeOperation = 'source-over';
-    drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS,
-      {color: '#00FF00', lineWidth: 4});
-    drawLandmarks(canvasCtx, results.poseLandmarks,
-      {color: '#FF0000', lineWidth: 2});
-    drawConnectors(canvasCtx, results.faceLandmarks, FACEMESH_TESSELATION,
-      { color: '#C0C0C070', lineWidth: 1 });
-    drawConnectors(canvasCtx, results.leftHandLandmarks, HAND_CONNECTIONS,
-      { color: '#CC0000', lineWidth: 5 });
-    drawLandmarks(canvasCtx, results.leftHandLandmarks,
-      { color: '#00FF00', lineWidth: 2 });
-    drawConnectors(canvasCtx, results.rightHandLandmarks, HAND_CONNECTIONS,
-      { color: '#00CC00', lineWidth: 5 });
-    drawLandmarks(canvasCtx, results.rightHandLandmarks,
-      { color: '#FF0000', lineWidth: 2 });
-    canvasCtx.restore();
-
-  }
-let start;
-let stop;
-let holistic;
   useEffect(() => {
-     holistic = new Holistic({
-      locateFile: (file) => {
-        return `https://cdn.jsdelivr.net/npm/@mediapipe/holistic/${file}`;
-      }
+    const holistic = new Holistic({
+      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/holistic/${file}`
     });
     holistic.setOptions({
       selfieMode: true,
@@ -86,105 +40,73 @@ let holistic;
     });
     holistic.onResults(onResults);
 
-    if (
-      typeof webcamRef.current !== "undefined" &&
-      webcamRef.current !== null
-    ) {
-      if (!webcamRef.current?.video) return;
-      const camera = new Camera(webcamRef.current.video, {
-        onFrame: async () => {
-          if (!webcamRef.current?.video) return;
-          await holistic.send({ image: webcamRef.current.video });
-        },
-        width: 640,
-        height: 480,
-      });
-      camera.start();
-    }
-  }, [])
-  
-  start=async()=>{
+    const camera = new Camera(webcamRef.current?.video, {
+      onFrame: async () => {
+        if (webcamRef.current?.video) await holistic.send({ image: webcamRef.current.video });
+      },
+      width: 640,
+      height: 480,
+    });
+    camera.start();
+  }, []);
+
+  let detector;
+  const start = async () => {
     const model = await tf.loadLayersModel('model.json');
     setBtn(false)
-    id.current=setInterval(()=>{
-      detector(model)
-    },100)
-  }
-  stop=()=>{
+    id.current = setInterval(() => detector(model), 100);
+  };
+
+  const stop = () => {
     setBtn(true)
     clearInterval(id.current)
-  }
-  
-  
+  };
 
-  let extract_landmarks;
-  const detector = async (model)=>{
-    if (
-      typeof webcamRef.current!=='undefined'&& webcamRef.current !== null && webcamRef.current.video.readyState===4){
-        const video=webcamRef.current.video;
-        const videoWidth=webcamRef.current.video.videoWidth;
-        const videoHeight=webcamRef.current.video.videoHeight;
+  const onResults = (results) => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (!ctx || !webcamRef.current?.video) return;
 
-        webcamRef.current.video.width=videoWidth;
-        webcamRef.current.video.height=videoHeight;
+    const { videoWidth, videoHeight } = webcamRef.current.video;
+    canvas.width = videoWidth;
+    canvas.height = videoHeight;
 
-        canvasRef.current.width=videoWidth;
-        canvasRef.current.height=videoHeight;
-        const lol=holistic.extract_landmarks(onResults)
-        console.log(lol)
-        // const model = await tf.loadLayersModel('model.json');
-        // const img = tf.browser.fromPixels(video);
-        // // const normalizedImg = img.toFloat().div(255);
-        // const results=holistic.process(img)
-        // console.log(results)
+    ctx.save();
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.globalCompositeOperation = 'source-in';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.globalCompositeOperation = 'destination-atop';
+    ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
+    ctx.globalCompositeOperation = 'source-over';
+    drawConnectors(ctx, results.poseLandmarks, POSE_CONNECTIONS, { color: '#00FF00', lineWidth: 4 });
+    drawLandmarks(ctx, results.poseLandmarks, { color: '#FF0000', lineWidth: 2 });
+    drawConnectors(ctx, results.faceLandmarks, FACEMESH_TESSELATION, { color: '#C0C0C070', lineWidth: 1 });
+    drawConnectors(ctx, results.leftHandLandmarks, HAND_CONNECTIONS, { color: '#CC0000', lineWidth: 5 });
+    drawLandmarks(ctx, results.leftHandLandmarks, { color: '#00FF00', lineWidth: 2 });
+    drawConnectors(ctx, results.rightHandLandmarks, HAND_CONNECTIONS, { color: '#00CC00', lineWidth: 5 });
+    drawLandmarks(ctx, results.rightHandLandmarks, { color: '#FF0000', lineWidth: 2 });
+    ctx.restore();
+    
+    const pose = results.poseLandmarks?.map(landmark => [landmark.x, landmark.y, landmark.z, landmark.visibility]).flat() || Array(132).fill(0);
+    const face = results.faceLandmarks?.map(landmark => [landmark.x, landmark.y, landmark.z]).flat() || Array(1404).fill(0);
+    const rh = results.rightHandLandmarks?.map(landmark => [landmark.x, landmark.y, landmark.z]).flat() || Array(63).fill(0);
+    const lh = results.leftHandLandmarks?.map(landmark => [landmark.x, landmark.y, landmark.z]).flat() || Array(63).fill(0);      
+    const cat = pose.concat(face, lh, rh);
 
-        // const extract=extract_landmarks(img)
-        // console.log(extract)
-        
-        // const resized = tf.image.resizeBilinear(img, [30, 1662]); 
-        // const grayscale = resized.mean(2); 
-        // const reshaped = grayscale.reshape([1, 30, 1662]); 
-        // const obj = await model.predict(landmarks);
-        // console.log(obj)
-        
+    detector = async (model) => {
+      if (webcamRef.current && webcamRef.current.video && webcamRef.current.video.readyState === 4) {
+        console.log(cat);
+      }
+    }; 
+  };
 
-        tf.dispose(img)
-        // tf.dispose(normalizedImg)
-        // tf.dispose(extract)
-        tf.dispose(model)
-        // tf.dispose(resized)
-        // tf.dispose(grayscale)
-        // tf.dispose(reshaped)
-        // tf.dispose(obj)
-      } 
-    };
-
-    extract_landmarks=(results) =>{
-      const face = results.faceLandmarks ? results.faceLandmarks.map(landmark => [landmark.x, landmark.y, landmark.z]).flat() : Array(1404).fill(0);
-      const pose = results.poseLandmarks ? results.poseLandmarks.map(landmark => [landmark.x, landmark.y, landmark.z, landmark.visibility]).flat() : Array(132).fill(0);
-      const rh = results.rightHandLandmarks ? results.rightHandLandmarks.map(landmark => [landmark.x, landmark.y, landmark.z]).flat() : Array(63).fill(0);
-      const lh = results.leftHandLandmarks ? results.leftHandLandmarks.map(landmark => [landmark.x, landmark.y, landmark.z]).flat() : Array(63).fill(0);
-      // console.log(face)
-      // console.log(pose)
-      // console.log(rh)
-      // console.log(lh)
-      
-      return pose.concat(face, lh, rh);
-  }
   return (
     <div className="App">
-      <Webcam
-        ref={webcamRef}
-        style={containerStyle}
-      />
-      <canvas
-        ref={canvasRef}
-        style={containerStyle}
-      />
-      <button style={{cursor:'pointer'}} onClick={btn ? start:stop}>{btn?"start":'stop'}</button>
+      <Webcam ref={webcamRef} style={containerStyle}  />
+      <canvas ref={canvasRef} style={containerStyle} />
+      <button style={{ cursor: 'pointer' }} onClick={btn ? start : stop}>{btn ? "start" : 'stop'}</button>
     </div>
   );
 }
 
-export default App;
-
+export default Translate;
