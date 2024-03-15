@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect,useRef, useState } from 'react';
 import Webcam from "react-webcam";
 import { Camera } from "@mediapipe/camera_utils";
 import { FACEMESH_TESSELATION, HAND_CONNECTIONS, Holistic, POSE_CONNECTIONS } from '@mediapipe/holistic';
@@ -24,37 +24,45 @@ function Translate() {
     height: 'auto'
   };
 
-  useEffect(() => {
-    const holistic = new Holistic({
-      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/holistic/${file}`
-    });
-    holistic.setOptions({
-      selfieMode: true,
-      modelComplexity: 1,
-      smoothLandmarks: true,
-      enableSegmentation: true,
-      smoothSegmentation: true,
-      refineFaceLandmarks: true,
-      minDetectionConfidence: 0.5,
-      minTrackingConfidence: 0.5
-    });
-    holistic.onResults(onResults);
+  
+useEffect(()=>{
+  const camera = new Camera(webcamRef.current?.video, {
+    onFrame: async () => {
+      if (webcamRef.current?.video) await holistic.send({ image: webcamRef.current.video });
+    },
+    width: 640,
+    height: 480,
+  });
+  camera.start();
+})
 
-    const camera = new Camera(webcamRef.current?.video, {
-      onFrame: async () => {
-        if (webcamRef.current?.video) await holistic.send({ image: webcamRef.current.video });
-      },
-      width: 640,
-      height: 480,
-    });
-    camera.start();
-  }, []);
 
+  let frames=[]
+  let sentences=[]
   let detector;
+
   const start = async () => {
     const model = await tf.loadLayersModel('model.json');
     setBtn(false)
-    id.current = setInterval(() => detector(model), 100);
+    id.current = setInterval(() => {
+      const holistic = new Holistic({
+        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/holistic/${file}`
+      });
+      holistic.setOptions({
+        selfieMode: true,
+        modelComplexity: 1,
+        smoothLandmarks: true,
+        enableSegmentation: true,
+        smoothSegmentation: true,
+        refineFaceLandmarks: true,
+        minDetectionConfidence: 0.5,
+        minTrackingConfidence: 0.5
+      });
+      holistic.onResults(onResults);
+      detector(model)
+      , 
+      
+      10});
   };
 
   const stop = () => {
@@ -88,21 +96,39 @@ function Translate() {
     ctx.restore();
     
     const pose = results.poseLandmarks?.map(landmark => [landmark.x, landmark.y, landmark.z, landmark.visibility]).flat() || Array(132).fill(0);
-    const face = results.faceLandmarks?.map(landmark => [landmark.x, landmark.y, landmark.z]).flat() || Array(1404).fill(0);
+    const face = (results.faceLandmarks ? results.faceLandmarks.map(landmark => [landmark.x, landmark.y, landmark.z]).flat() : []).concat(Array(1404).fill(0)).slice(0, 1404);
+
     const rh = results.rightHandLandmarks?.map(landmark => [landmark.x, landmark.y, landmark.z]).flat() || Array(63).fill(0);
     const lh = results.leftHandLandmarks?.map(landmark => [landmark.x, landmark.y, landmark.z]).flat() || Array(63).fill(0);      
+    // console.log(pose)
+    // console.log(face)
+    // console.log(rh)
+    // console.log(lh)
     const cat = pose.concat(face, lh, rh);
 
+    
+
     detector = async (model) => {
-      if (webcamRef.current && webcamRef.current.video && webcamRef.current.video.readyState === 4) {
-        console.log(cat);
-      }
+      
+        frames.push(cat)
+        
+        if (frames.length==30){
+          // x
+          // frames.
+          // console.log(frames)
+          console.log(frames.length)
+          
+          frames.splice(0,frames.length)
+        }
+                   
+      
+
     }; 
   };
 
   return (
     <div className="App">
-      <Webcam ref={webcamRef} style={containerStyle}  />
+      <Webcam ref={webcamRef} style={containerStyle} mirrored={true} />
       <canvas ref={canvasRef} style={containerStyle} />
       <button style={{ cursor: 'pointer' }} onClick={btn ? start : stop}>{btn ? "start" : 'stop'}</button>
     </div>
