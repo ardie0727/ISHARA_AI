@@ -1,4 +1,4 @@
-import React, { useEffect,useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Webcam from "react-webcam";
 import { Camera } from "@mediapipe/camera_utils";
 import { FACEMESH_TESSELATION, HAND_CONNECTIONS, Holistic, POSE_CONNECTIONS } from '@mediapipe/holistic';
@@ -9,6 +9,7 @@ function Translate() {
   const webcamRef = useRef(null);
   const canvasRef = useRef(null);
   const [btn, setBtn] = useState(true);
+  
   const id = useRef();
 
   const containerStyle = {
@@ -23,54 +24,56 @@ function Translate() {
     maxWidth: '540px',
     height: 'auto'
   };
-
   
-useEffect(()=>{
-  const camera = new Camera(webcamRef.current?.video, {
-    onFrame: async () => {
-      if (webcamRef.current?.video) await holistic.send({ image: webcamRef.current.video });
-    },
-    width: 640,
-    height: 480,
-  });
-  camera.start();
-})
+let holistic;
+let model;
+  useEffect(() => {
+    const loadModel = async () => {
+        model = await tf.loadLayersModel('model.json');
+    };
+
+    loadModel();
+    holistic = new Holistic({
+      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/holistic/${file}`
+    });
+    holistic.setOptions({
+      selfieMode: false,
+      modelComplexity: 1,
+      smoothLandmarks: true,
+      enableSegmentation: true,
+      smoothSegmentation: true,
+      refineFaceLandmarks: true,
+      minDetectionConfidence: 0.5,
+      minTrackingConfidence: 0.5
+    });
+    
+    const camera = new Camera(webcamRef.current?.video, {
+      onFrame: async () => {
+        if (webcamRef.current?.video) await holistic.send({ image: webcamRef.current.video });
+      },
+      width: 640,
+      height: 480,
+    });
+    camera.start();
+
+  }, []);
+  
 
 
-  let frames=[]
-  let sentences=[]
-  let detector;
-
-  const start = async () => {
-    const model = await tf.loadLayersModel('model.json');
-    setBtn(false)
+const start = () => {   
+    setBtn(false);
     id.current = setInterval(() => {
-      const holistic = new Holistic({
-        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/holistic/${file}`
-      });
-      holistic.setOptions({
-        selfieMode: true,
-        modelComplexity: 1,
-        smoothLandmarks: true,
-        enableSegmentation: true,
-        smoothSegmentation: true,
-        refineFaceLandmarks: true,
-        minDetectionConfidence: 0.5,
-        minTrackingConfidence: 0.5
-      });
-      holistic.onResults(onResults);
-      detector(model)
-      , 
-      
-      10});
-  };
-
-  const stop = () => {
+        holistic.onResults(onResults);
+    }, 1);
+};
+const stop =  () => { 
     setBtn(true)
     clearInterval(id.current)
   };
+let frames=[]
 
-  const onResults = (results) => {
+
+  const onResults = async (results) => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
     if (!ctx || !webcamRef.current?.video) return;
@@ -96,39 +99,23 @@ useEffect(()=>{
     ctx.restore();
     
     const pose = results.poseLandmarks?.map(landmark => [landmark.x, landmark.y, landmark.z, landmark.visibility]).flat() || Array(132).fill(0);
-    const face = (results.faceLandmarks ? results.faceLandmarks.map(landmark => [landmark.x, landmark.y, landmark.z]).flat() : []).concat(Array(1404).fill(0)).slice(0, 1404);
-
+    const face = results.faceLandmarks?.map(landmark => [landmark.x, landmark.y, landmark.z]).flat() || Array(1404).fill(0).splice(0,1404);
     const rh = results.rightHandLandmarks?.map(landmark => [landmark.x, landmark.y, landmark.z]).flat() || Array(63).fill(0);
     const lh = results.leftHandLandmarks?.map(landmark => [landmark.x, landmark.y, landmark.z]).flat() || Array(63).fill(0);      
-    // console.log(pose)
-    // console.log(face)
-    // console.log(rh)
-    // console.log(lh)
     const cat = pose.concat(face, lh, rh);
-
     
-
-    detector = async (model) => {
-      
-        frames.push(cat)
-        
-        if (frames.length==30){
-          // x
-          // frames.
-          // console.log(frames)
-          console.log(frames.length)
-          
-          frames.splice(0,frames.length)
-        }
-                   
-      
-
-    }; 
+    frames.push(cat)      
+    if (frames.length === 30) {
+      let x = frames.splice(0, frames.length);
+      let tensor = tf.tensor(x).expandDims(0);
+      let predictions =  model.predict(tensor);
+      console.log(predictions);  
+    }
   };
 
   return (
     <div className="App">
-      <Webcam ref={webcamRef} style={containerStyle} mirrored={true} />
+      <Webcam ref={webcamRef} style={containerStyle}  />
       <canvas ref={canvasRef} style={containerStyle} />
       <button style={{ cursor: 'pointer' }} onClick={btn ? start : stop}>{btn ? "start" : 'stop'}</button>
     </div>
