@@ -21,10 +21,10 @@ function Translate() {
     textAlign: "center",
     zIndex: 9,
     width: '100%',
-    maxWidth: '540px',
+    maxWidth: '1000px',
     height: 'auto'
   };
-  
+let labels=['blank', 'hello', 'how are you', 'sorry', 'thank you', 'welcome']
 let holistic;
 let model;
   useEffect(() => {
@@ -105,12 +105,15 @@ let frames=[]
     const cat = pose.concat(face, lh, rh);
     let i=Date.now()
     frames.push(cat)      
+    
     if (frames.length === 30) {
       let x = frames.splice(0, frames.length);
       let tensor = tf.tensor(x).expandDims(0);
       let predictions = await model.predict(tensor);
       let f=Date.now()
-      console.log(predictions,f-i);  
+      let action=labels[predictions.as1D().argMax().arraySync()]
+      console.log(predictions.arraySync()[0],f-i);  
+      console.log(action)
     }
   };
 
