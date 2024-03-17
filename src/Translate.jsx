@@ -99,17 +99,18 @@ let frames=[]
     ctx.restore();
     
     const pose = results.poseLandmarks?.map(landmark => [landmark.x, landmark.y, landmark.z, landmark.visibility]).flat() || Array(132).fill(0);
-    const face = results.faceLandmarks?.map(landmark => [landmark.x, landmark.y, landmark.z]).flat() || Array(1404).fill(0).splice(0,1404);
+    const face = (results.faceLandmarks ? results.faceLandmarks.map(landmark => [landmark.x, landmark.y, landmark.z]).flat() : []).concat(Array(1404).fill(0)).slice(0, 1404);
     const rh = results.rightHandLandmarks?.map(landmark => [landmark.x, landmark.y, landmark.z]).flat() || Array(63).fill(0);
-    const lh = results.leftHandLandmarks?.map(landmark => [landmark.x, landmark.y, landmark.z]).flat() || Array(63).fill(0);      
+    const lh = results.leftHandLandmarks?.map(landmark => [landmark.x, landmark.y, landmark.z]).flat() || Array(63).fill(0);          
     const cat = pose.concat(face, lh, rh);
-    
+    let i=Date.now()
     frames.push(cat)      
     if (frames.length === 30) {
       let x = frames.splice(0, frames.length);
       let tensor = tf.tensor(x).expandDims(0);
-      let predictions =  model.predict(tensor);
-      console.log(predictions);  
+      let predictions = await model.predict(tensor);
+      let f=Date.now()
+      console.log(predictions,f-i);  
     }
   };
 
