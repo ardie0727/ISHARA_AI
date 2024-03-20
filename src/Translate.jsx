@@ -9,6 +9,7 @@ function Translate() {
   const webcamRef = useRef(null);
   const canvasRef = useRef(null);
   const [btn, setBtn] = useState(true);
+  const [str, setStr]=useState("");
   
   const id = useRef();
 
@@ -27,7 +28,11 @@ function Translate() {
 let labels=['blank', 'hello', 'how are you', 'sorry', 'thank you', 'welcome']
 let holistic;
 let model;
+
+
   useEffect(() => {
+
+
     const loadModel = async () => {
         model = await tf.loadLayersModel('model.json');
     };
@@ -71,7 +76,7 @@ const stop =  () => {
     clearInterval(id.current)
   };
 let frames=[]
-
+let sentences=[]
 
   const onResults = async (results) => {
     const canvas = canvasRef.current;
@@ -107,13 +112,30 @@ let frames=[]
     frames.push(cat)      
     
     if (frames.length === 30) {
-      let x = frames.splice(0, frames.length);
-      let tensor = tf.tensor(x).expandDims(0);
-      let predictions = await model.predict(tensor);
-      let f=Date.now()
-      let action=labels[predictions.as1D().argMax().arraySync()]
-      console.log(predictions.arraySync()[0],f-i);  
-      console.log(action)
+      const formdata = new FormData();
+      formdata.append("vector", JSON.stringify(frames));
+
+      const requestOptions = {
+        method: "POST",
+        body: formdata,
+        redirect: "follow"
+      };
+
+      fetch("https://8740-2401-4900-1723-c589-685e-757b-6d99-df83.ngrok-free.app/test", requestOptions)
+        .then((response) => response.text())
+        .then((result) => {
+          console.log(result)
+          const jsonResponse = JSON.parse(result);
+          
+          sentences.push(jsonResponse.resp)
+          
+          // location.reload()
+        })
+        .catch((error) => console.error(error));
+        setStr(sentences)
+        frames.splice(0, frames.length);
+        console.log(sentences.toString().replace(/,/g, ' '));
+     
     }
   };
 
@@ -122,6 +144,7 @@ let frames=[]
       <Webcam ref={webcamRef} style={containerStyle}  />
       <canvas ref={canvasRef} style={containerStyle} />
       <button style={{ cursor: 'pointer' }} onClick={btn ? start : stop}>{btn ? "start" : 'stop'}</button>
+      <h3 style={{zIndex:20}}>{str}</h3>
     </div>
   );
 }
