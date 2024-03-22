@@ -91,5 +91,44 @@ margin-left:auto;
     background-size:400px;
   }
 }
-
-
+.onbtn{
+  margin-top: 800px;
+  background-color:rgba(38, 38, 38, 0.999);
+  font-size:2rem;
+  font-family: sans-serif;
+}
+.onta{
+  background-color: rgba(39, 38, 38, 0.999);
+  font-size:2rem;
+  font-family: sans-serif;
+}
+@media (max-width:1000px) {
+  .onbtn{
+    margin-top: 800px;
+  }
+}
+@media (max-width:900px) {
+  .onbtn{
+    margin-top: 700px;
+  }
+}
+@media (max-width:800px) {
+  .onbtn{
+    margin-top: 600px;
+  }
+}
+@media (max-width:700px) {
+  .onbtn{
+    margin-top: 550px;
+  }
+}
+@media (max-width:600px) {
+  .onbtn{
+    margin-top: 450px;
+  }
+}
+@media (max-width:500px) {
+  .onbtn{
+    margin-top: 400px;
+  }
+}

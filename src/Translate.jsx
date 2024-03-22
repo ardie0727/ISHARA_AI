@@ -56,6 +56,8 @@ function Translate() {
     marginRight: "auto",
     padding:20,
     left: 0,
+    right:0,
+    zIndex:9,
     textAlign: "center",
     width: '100%',
     maxWidth: '1000px',
@@ -163,10 +165,12 @@ let count=0
     <>
     <div className="App" >
       <div className='Video'>
-      <Webcam ref={webcamRef} style={containerStyle} />
+      <Webcam ref={webcamRef} style={containerStyle} /> 
       <canvas ref={canvasRef} style={containerStyle} />
-      <button style={{marginLeft:1000, padding:10, cursor: 'pointer', marginRight:'auto', marginBlock:20,width:'100%', maxWidth:"300px"}} onClick={btn ? start : stop}>{btn ? "start" : 'stop'}</button>
-      <textarea style={{marginLeft:1000, padding:10, marginRight:'auto'}} placeholder='Translation...'>{responser}</textarea>
+      </div>
+      <div>
+      <button className='onbtn'style={{marginLeft:95, padding:10, cursor: 'pointer', marginRight:'auto',width:'100%', maxWidth: '970px'}} onClick={btn ? start : stop}>{btn ? "Start" : 'Stop'}</button>
+      <textarea className='onta' style={{marginLeft:95,width:'100%',height:640, marginTop:10,padding:10, marginRight:'auto',maxWidth: '970px'}} placeholder='Translation...'>{responser}</textarea>
       </div>
     </div>
     </>
